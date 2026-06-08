@@ -1,0 +1,7 @@
+1) create prompt analyser for creating the regex... 
+2) build a ui where we can routing policies for policy. 
+3) a/b testing does it evaluate same request ? or different request for this model?
+
+
+
+

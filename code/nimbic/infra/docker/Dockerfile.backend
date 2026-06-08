@@ -1,0 +1,39 @@
+# --- Build Stage ---
+FROM python:3.12-slim as builder
+
+WORKDIR /build
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy package config and scaffold app structure for dependency installation
+COPY pyproject.toml README.md ./
+RUN mkdir app && touch app/__init__.py
+
+# Pre-install CPU-only PyTorch to avoid massive CUDA downloads
+RUN pip install --no-cache-dir --user torch==2.3.0+cpu --extra-index-url https://download.pytorch.org/whl/cpu
+
+# Install dependencies into user local path
+RUN pip install --no-cache-dir --user .
+
+# --- Runtime Stage ---
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Copy python packages from build stage
+COPY --from=builder /root/.local /root/.local
+# Copy actual application code
+COPY . /app
+
+# Ensure user local binaries are on PATH
+ENV PATH=/root/.local/bin:$PATH
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+EXPOSE 8000
+
+# Execute FastAPI via Uvicorn ASGI server
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
